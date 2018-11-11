@@ -1,4 +1,9 @@
-class encoder(nn.Module):
+import torch
+import torch.nn as nn
+from torch import optim
+import torch.nn.functional as F
+
+class Encoder(nn.Module):
     def __init__(self, input_size, hidden_size):
         super(encoder, self).__init__()
         self.hidden_size = hidden_size

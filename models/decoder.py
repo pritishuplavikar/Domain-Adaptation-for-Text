@@ -1,7 +1,11 @@
-from constants import * 
+import torch
+import torch.nn as nn
+from torch import optim
+import torch.nn.functional as F
+import data.constants
 
-class decoder(nn.Module):
-    def __init__(self, hidden_size, output_size, dropout_p=0.1, max_length=constants.MAX_LENGTH):
+class Decoder(nn.Module):
+    def __init__(self, hidden_size, output_size, max_length, dropout_p=0.1):
         super(decoder, self).__init__()
         self.hidden_size = hidden_size
         self.output_size = output_size
