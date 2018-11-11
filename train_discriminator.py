@@ -13,32 +13,25 @@ test_shakespeare_path = './dataset/test.original.nltktok'
 train_modern_path = './dataset/train.modern.nltktok'
 test_modern_path = './dataset/test.modern.nltktok'
 
-def train():
+def train(model_config, num_epochs=10, batch_size=1, base_lr=0.001):
 	mode = 'train'
-	dataset = ShakespeareModern(train_shakespeare_path, test_shakespeare_path, train_modern_path, test_modern_path, mode=mode)
 
-	batch_size = 1
-	base_lr = 0.001
+	dataset = ShakespeareModern(train_shakespeare_path, test_shakespeare_path, train_modern_path, test_modern_path, mode=mode)
 	dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
 
-	shakespeare_disc = Discriminator(300, 256, len(dataset.vocab)).cuda()
+	shakespeare_disc = Discriminator(model_config['embedding_size'], model_config['hidden_dim'], len(dataset.vocab)).cuda()
 	shakespeare_disc.train()
 	criterion = nn.BCELoss().cuda()
 	optimizer = torch.optim.Adam(shakespeare_disc.parameters(), lr=base_lr,
 								 weight_decay=1e-5)
-	num_epochs = 10
-	# scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda epoch: (num_epochs - epoch)/(epoch + 1) * base_lr)
 
 	real_label = torch.ones((1,1)).cuda()
 	fake_label = torch.zeros((1,1)).cuda()
 	for epoch in range(num_epochs):
-		# scheduler.step()
 		for idx, (s, s_addn_feats, m, m_addn_feats) in tqdm(enumerate(dataloader)):
 			s = s.squeeze(0)
 			m = m.squeeze(0)
 
-			# print (idx_to_sent(s, dataset), s_addn_feats)
-			# print (idx_to_sent(m, dataset), m_addn_feats)
 			s = Variable(s).cuda()
 			s_output = shakespeare_disc(s, s_addn_feats)
 			s_loss = criterion(s_output, real_label)
@@ -57,12 +50,11 @@ def train():
 			optimizer.step()
 			shakespeare_disc.hidden = shakespeare_disc.init_hidden()
 
-			if idx % 101 == 0:
+			if idx % 100 == 0:
 				print('\tepoch [{}/{}], iter: {}, s_loss: {:.4f}, m_loss: {:.4f}, preds: s: {},{}, m: {},{}'
-			  .format(epoch+1, num_epochs, idx, s_loss.item(), m_loss.item(), s_output.item(), np.round(s_output.item()), m_output.item(), np.round(m_output.item())))
+					.format(epoch+1, num_epochs, idx, s_loss.item(), m_loss.item(), s_output.item(), np.round(s_output.item()), m_output.item(), np.round(m_output.item())))
 
-		print('\tepoch [{}/{}]'
-			  .format(epoch+1, num_epochs))
+		print('\tepoch [{}/{}]'.format(epoch+1, num_epochs))
 
 		torch.save(shakespeare_disc.state_dict(), './shakespeare_disc.pth')
 
@@ -77,18 +69,21 @@ def test():
 
 	shakespeare_disc.eval()
 
-	for idx, (s, m) in tqdm(enumerate(dataloader)):
+	for idx, (s, s_addn_feats, m, m_addn_feats) in tqdm(enumerate(dataloader)):
 		s = s.squeeze(0)
 		m = m.squeeze(0)
-		# print (idx_to_sent(s, dataset))
-		# print (idx_to_sent(m, dataset))
+
 		s = Variable(s).cuda()
-		s_output = shakespeare_disc(s)
+		s_output = shakespeare_disc(s, s_addn_feats)
 
 		m = Variable(m).cuda()
-		m_output = shakespeare_disc(m)
+		m_output = shakespeare_disc(m, m_addn_feats)
 
-		print (idx_to_sent(s, dataset), 'Output: {}, {}'.format(s_output, torch.max(s_output, 1)))
-		print (idx_to_sent(m, dataset), 'Output: {}. {}'.format(m_output, torch.max(m_output, 1)))
+		print (idx_to_sent(s, dataset), 'Output: {}, {}'.format(s_output.item(), np.round(s_output.item())))
+		print (idx_to_sent(m, dataset), 'Output: {}. {}'.format(m_output.item(), np.round(m_output.item())))
 
-train()
+model_config = {
+	'embedding_size': 300,
+	'hidden_dim': 256
+}
+train(model_config)
