@@ -34,9 +34,15 @@ class ShakespeareModern(Dataset):
 			self.vocab.add_sentence(sentence, domain)
 			data[idx] = get_idx_sentence(self.vocab, sentence)
 
-		max_len = getattr(self, 'domain_'+domain+'_max_len')
+		max_len = 0
 		for sentence in data:
 			max_len = max(max_len, len(sentence))
+		if  (domain == 'A'):
+			self.domain_A_max_len = max(self.domain_A_max_len, max_len)
+		else:
+			self.domain_B_max_len = max(self.domain_B_max_len, max_len)
+
+		print("DS: maxlen=", max_len, domain, self.domain_A_max_len, self.domain_B_max_len)
 
 		padded_sequences = np.ndarray((max_len, len(data), 1))
 		for idx, sentence in enumerate(data):

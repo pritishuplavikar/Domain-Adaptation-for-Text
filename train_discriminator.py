@@ -15,9 +15,9 @@ test_modern_path = './dataset/test.modern.nltktok'
 def train(model_config, train_config):
 	mode = 'train'
 
-	dataset = ShakespeareModern(train_shakespeare_path, test_shakespeare_path, train_modern_path, test_modern_path, mode=mode)
+	dataset = ShakespeareModern(train_shakespeare_path, test_shakespeare_path, train_modern_path, test_modern_path, mode=mode)	
 	dataloader = DataLoader(dataset, batch_size=train_config['batch_size'], shuffle=False)
-
+	print(dataset.domain_A_max_len)
 	shakespeare_disc = Discriminator(model_config['embedding_size'], model_config['hidden_dim'], len(dataset.vocab), batch_size=train_config['batch_size']).cuda()
 	shakespeare_disc.train()
 
