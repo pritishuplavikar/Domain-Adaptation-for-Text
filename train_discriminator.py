@@ -37,13 +37,13 @@ def train(model_config, train_config):
 			m = m.transpose(0, 1)
 
 			s = Variable(s).cuda()
-                        print("Before ", s.grad)
+			print("Before ", s.grad)
 			s_output = shakespeare_disc(s, s_addn_feats)
 			s_loss = criterion(s_output, real_label)
 			s_loss = 100 * s_loss
 			optimizer.zero_grad()
 			s_loss.backward()
-			print("After ", s.grad)
+                        print("After: ", s.grad)
                         optimizer.step()
 			shakespeare_disc.hidden = shakespeare_disc.init_hidden()
 
