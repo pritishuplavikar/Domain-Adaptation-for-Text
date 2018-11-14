@@ -43,7 +43,7 @@ def train(model_config, train_config):
 			s_loss = 100 * s_loss
 			optimizer.zero_grad()
 			s_loss.backward()
-                        print("After: ", s.grad)
+			print("After ", s.grad)
                         optimizer.step()
 			shakespeare_disc.hidden = shakespeare_disc.init_hidden()
 
