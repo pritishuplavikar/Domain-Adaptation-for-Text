@@ -15,7 +15,7 @@ test_modern_path = './dataset/test.modern.nltktok'
 def train(model_config, train_config):
 	mode = 'train'
 
-	dataset = ShakespeareModern(train_shakespeare_path, test_shakespeare_path, train_modern_path, test_modern_path, mode=mode)	
+	dataset = ShakespeareModern(train_shakespeare_path, test_shakespeare_path, train_modern_path, test_modern_path, mode=mode)
 	dataloader = DataLoader(dataset, batch_size=train_config['batch_size'], shuffle=False)
 	print(dataset.domain_A_max_len)
 	shakespeare_disc = Discriminator(model_config['embedding_size'], model_config['hidden_dim'], len(dataset.vocab), batch_size=train_config['batch_size']).cuda()
@@ -37,12 +37,14 @@ def train(model_config, train_config):
 			m = m.transpose(0, 1)
 
 			s = Variable(s).cuda()
+                        print("Before ", s.grad)
 			s_output = shakespeare_disc(s, s_addn_feats)
 			s_loss = criterion(s_output, real_label)
 			s_loss = 100 * s_loss
 			optimizer.zero_grad()
 			s_loss.backward()
-			optimizer.step()
+			print("After ", s.grad)
+                        optimizer.step()
 			shakespeare_disc.hidden = shakespeare_disc.init_hidden()
 
 			m = Variable(m).cuda()
