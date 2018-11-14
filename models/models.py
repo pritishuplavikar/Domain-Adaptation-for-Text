@@ -15,7 +15,7 @@ class Discriminator(nn.Module):
         self.word_embeddings = nn.Embedding(vocab_size, embedding_dim, padding_idx=PAD_token)
         self.lstm = nn.LSTM(embedding_dim, hidden_dim)
         self.hidden2label = nn.Sequential(
-            nn.Linear(self.hidden_dim + self.num_addn_feat, label_size),
+            nn.Linear(self.hidden_dim , label_size), # + self.num_addn_feat
             nn.Sigmoid()
             )
         self.hidden = self.init_hidden()
@@ -29,9 +29,9 @@ class Discriminator(nn.Module):
             c0 = Variable(torch.zeros(1, self.batch_size, self.hidden_dim))
         return (h0, c0)
 
-    def forward(self, sentence, addn_feats):
+    def forward(self, sentence): #, addn_feats
         embeddings = self.word_embeddings(sentence)
         input_seq = embeddings.view(len(sentence), self.batch_size, -1)
         lstm_out, self.hidden = self.lstm(input_seq, self.hidden)
-        addn_feat_tensor = torch.cat((lstm_out[-1], addn_feats.cuda()), 1)
-        return self.hidden2label(addn_feat_tensor)
+        # addn_feat_tensor = torch.cat((lstm_out[-1], addn_feats.cuda()), 1)
+        return self.hidden2label(lstm_out[-1])
