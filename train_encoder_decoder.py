@@ -35,17 +35,17 @@ def train(model_config, train_config):
 
 			model.forward(real_A, A_addn_feats, real_B, B_addn_feats)
 
-			if idx % 10 == 0:
-				print('\tepoch [{}/{}], iter: {}, Losses: G_A: {}, G_B: {}, D_A: {}, D_B: {}, cycle_A: {}, cycle_B: {}, idt_A: {}, idt_B: {}'
+			if idx % 100 == 0:
+				print('\tepoch [{}/{}], iter: {}, Losses: G_AtoB: {}, G_BtoA: {}, D_A: {}, D_B: {}, cycle_A: {}, cycle_B: {}, idt_A: {}, idt_B: {}'
 					.format(epoch+1, train_config['num_epochs'], idx, model.loss_G_AtoB, model.loss_G_BtoA, 
 						model.loss_D_A, model.loss_D_B, model.loss_cycle_A, model.loss_cycle_B, 
 						model.loss_idt_A, model.loss_idt_B))
 
-		torch.save(model.embedding_layer.state_dict(), 'embedding_layer.pth')
-		torch.save(model.G_AtoB.state_dict(), 'G_AtoB.pth')
-		torch.save(model.G_BtoA.state_dict(), 'G_BtoA.pth')
-		torch.save(model.D_A.state_dict(), 'D_A.pth')
-		torch.save(model.D_B.state_dict(), 'D_B.pth')
+		torch.save(model.embedding_layer.state_dict(), str(epoch+1)+'_embedding_layer.pth')
+		torch.save(model.G_AtoB.state_dict(), str(epoch+1)+'_G_AtoB.pth')
+		torch.save(model.G_BtoA.state_dict(), str(epoch+1)+'_G_BtoA.pth')
+		torch.save(model.D_A.state_dict(), str(epoch+1)+'_D_A.pth')
+		torch.save(model.D_B.state_dict(), str(epoch+1)+'_D_B.pth')
 
 		print('\tepoch [{}/{}] complete. Models saved.'.format(epoch+1, train_config['num_epochs']))
 

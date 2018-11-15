@@ -10,7 +10,6 @@ from data.utils import idx_to_sent, get_addn_feats
 from tqdm import tqdm
 import numpy as np
 import itertools
-from torchviz import make_dot
 import torch.nn.functional as F
 
 class Seq2SeqCycleGAN:
@@ -82,19 +81,19 @@ class Seq2SeqCycleGAN:
 		return loss_D
 
 	def backward_D_A(self):
-		self.loss_D_A = self.backward_D_basic(self.D_A, self.real_A, self.real_A_addn_feats, self.fake_A, self.fake_A_addn_feats)
+		self.loss_D_A = self.backward_D_basic(self.D_A, self.real_A, self.real_A_addn_feats, self.fake_A, self.fake_A_addn_feats) * 10
 
 	def backward_D_B(self):
-		self.loss_D_B = self.backward_D_basic(self.D_B, self.real_B, self.real_B_addn_feats, self.fake_B, self.fake_B_addn_feats)
+		self.loss_D_B = self.backward_D_basic(self.D_B, self.real_B, self.real_B_addn_feats, self.fake_B, self.fake_B_addn_feats) * 10
 
 	def backward_G(self):
 		self.D_B.hidden = self.D_B.init_hidden()
 		self.fake_B_addn_feats = get_addn_feats(self.fake_B, self.vocab).cuda()
-		self.loss_G_AtoB = self.criterionBCE(self.D_B(self.fake_B, self.fake_B_addn_feats), self.real_label)
+		self.loss_G_AtoB = self.criterionBCE(self.D_B(self.fake_B, self.fake_B_addn_feats), self.real_label) * 10
 
 		self.D_A.hidden = self.D_A.init_hidden()
 		self.fake_A_addn_feats = get_addn_feats(self.fake_A, self.vocab).cuda()
-		self.loss_G_BtoA = self.criterionBCE(self.D_A(self.fake_A, self.fake_A_addn_feats), self.real_label)
+		self.loss_G_BtoA = self.criterionBCE(self.D_A(self.fake_A, self.fake_A_addn_feats), self.real_label) * 10
 		
 		if self.rec_A.size(0) != self.real_A_label.size(0):
 			self.real_A, self.rec_A, self.real_A_label = self.update_label_sizes(self.real_A, self.rec_A, self.real_A_label)
