@@ -22,11 +22,10 @@ def idx_to_sent(sent, vocab):
 	return res
 
 def get_addn_feats(preds, vocab):
-	preds = preds.max(dim=1)[1]
 	net_score = 0
 	domain_A_count = 0
 	domain_B_count = 0
-	sent_len = 0
+	sent_len = 1
 	for word in preds:
 		word = word.item()
 		if not word in vocab.tokens:

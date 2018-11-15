@@ -49,8 +49,8 @@ class ShakespeareModern(Dataset):
 
 		padded_sequences = np.ndarray((self.max_len, len(data), 1))
 		for idx, sentence in enumerate(data):
-			padded_sequences[-len(sentence):, idx, 0] = sentence
-			padded_sequences[:-len(sentence), idx, 0] = [PAD_token] * (self.max_len - len(sentence))
+			padded_sequences[:len(sentence), idx, 0] = sentence
+			padded_sequences[len(sentence):, idx, 0] = [PAD_token] * (self.max_len - len(sentence))
 
 		return torch.from_numpy(padded_sequences.astype(np.int64))
 
@@ -86,9 +86,3 @@ class ShakespeareModern(Dataset):
 			return max(self.test_domain_A_data.size(1), self.test_domain_B_data.size(1))
 		else:
 			return max(self.train_domain_A_data.size(1), self.train_domain_B_data.size(1))
-
-# train_domain_A_path = '../dataset/train.original.nltktok'
-# test_domain_A_path = '../dataset/test.original.nltktok'
-# train_domain_B_path = '../dataset/train.modern.nltktok'
-# test_domain_B_path = '../dataset/test.modern.nltktok'
-# sm = ShakespeareModern(train_domain_A_path, test_domain_A_path, train_domain_B_path, test_domain_B_path)

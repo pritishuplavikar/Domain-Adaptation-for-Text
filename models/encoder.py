@@ -12,20 +12,11 @@ class Encoder(nn.Module):
         self.input_size = input_size
         self.batch_size = batch_size
 
-        # self.embedding = embedding_layer
+        self.hidden = self.init_hidden()
         self.gru = nn.GRU(input_size, hidden_size)
 
-        self.hidden = self.init_hidden()
-
     def forward(self, input):
-        # print ('eenc ip', input.size())
-        # print (self.embedding)
-        # embedded = self.embedding(input)
-        # print ('enc emb size', embedded.size())
-        # embedded = embedded.view(input.size(0), self.batch_size, self.input_size)
-        # print ('embedded', embedded.size())
-        output, self.hidden = self.gru(input, self.hidden)
-        return output, self.hidden
+        return self.gru(input, self.hidden)
 
     def init_hidden(self):
         return Variable(torch.zeros(1, self.batch_size, self.hidden_size)).cuda()

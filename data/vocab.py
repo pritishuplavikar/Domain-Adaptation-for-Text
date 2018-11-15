@@ -42,7 +42,6 @@ class Vocab:
             if v >= min_count:
                 retained_words.append(k)
 
-        # Reset all the  dictionaries
         self.wrd2idx = {}
         self.wrd2cnt = {}
         self.idx2wrd = {EOS_token: "EOS", SOS_token: "SOS", PAD_token: "PAD"}

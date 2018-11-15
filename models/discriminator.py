@@ -5,14 +5,15 @@ from torch.autograd import Variable
 from data.constants import PAD_token
 
 class Discriminator(nn.Module):
-    def __init__(self, embedding_layer, model_config, train_config, use_gpu=True, num_addn_feat=3):
+    def __init__(self, model_config, train_config, vocab_size, use_gpu=True, num_addn_feat=3):
         super(Discriminator, self).__init__()
         self.hidden_dim = model_config['hidden_dim']
         self.batch_size = train_config['batch_size']
         self.use_gpu = use_gpu
         self.num_addn_feat = num_addn_feat
+        self.vocab_size = vocab_size
 
-        self.embedding_layer = embedding_layer
+        self.embedding_layer = nn.Embedding(self.vocab_size, model_config['embedding_size'], padding_idx=PAD_token)
         self.lstm = nn.LSTM(model_config['embedding_size'], self.hidden_dim)
         self.hidden2label = nn.Sequential(
             nn.Linear(self.hidden_dim + self.num_addn_feat, 1), 
