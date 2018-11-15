@@ -47,12 +47,12 @@ class ShakespeareModern(Dataset):
 
 		self.max_len = max(self.domain_A_max_len, self.domain_B_max_len)
 
-		padded_sequences = np.ndarray((self.max_len, len(data), 1))
+		# padded_sequences = np.ndarray((self.max_len, len(data), 1))
+		sentence_tensors = []
 		for idx, sentence in enumerate(data):
-			padded_sequences[-len(sentence):, idx, 0] = sentence
-			padded_sequences[:-len(sentence), idx, 0] = [PAD_token] * (self.max_len - len(sentence))
+			sentence_tensors.append(torch.Tensor(sentence).type(torch.LongTensor))
 
-		return torch.from_numpy(padded_sequences.astype(np.int64))
+		return sentence_tensors #torch.from_numpy(padded_sequences.astype(np.int64))
 
 	def get_addn_feats(self, sentence):
 		net_score = 0
@@ -60,7 +60,7 @@ class ShakespeareModern(Dataset):
 		domain_B_count = 0
 		sent_len = 0
 		for word in sentence:
-			word = word[0].item()
+			word = word.item()
 			if not word in self.vocab.tokens:
 				sent_len += 1
 				word = self.vocab.idx2wrd[word]
@@ -77,15 +77,15 @@ class ShakespeareModern(Dataset):
 
 	def __getitem__(self, index):
 		if self.mode == 'test':
-			return self.test_domain_A_data[:, index, :], self.get_addn_feats(self.test_domain_A_data[:, index, :]), self.test_domain_B_data[:, index, :], self.get_addn_feats(self.test_domain_B_data[:, index, :])
+			return self.test_domain_A_data[index], self.get_addn_feats(self.test_domain_A_data[index]), self.test_domain_B_data[index], self.get_addn_feats(self.test_domain_B_data[index])
 		else:
-			return self.train_domain_A_data[:, index, :], self.get_addn_feats(self.train_domain_A_data[:, index, :]), self.train_domain_B_data[:, index, :], self.get_addn_feats(self.train_domain_B_data[:, index, :])
+			return self.train_domain_A_data[index], self.get_addn_feats(self.train_domain_A_data[index]), self.train_domain_B_data[index], self.get_addn_feats(self.train_domain_B_data[index])
 
 	def __len__(self):
 		if self.mode == 'test':
-			return max(self.test_domain_A_data.size(1), self.test_domain_B_data.size(1))
+			return max(len(self.test_domain_A_data), len(self.test_domain_B_data))
 		else:
-			return max(self.train_domain_A_data.size(1), self.train_domain_B_data.size(1))
+			return max(len(self.train_domain_A_data), len(self.train_domain_B_data))
 
 # train_domain_A_path = '../dataset/train.original.nltktok'
 # test_domain_A_path = '../dataset/test.original.nltktok'

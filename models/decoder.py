@@ -25,19 +25,20 @@ class Decoder(nn.Module):
 
     def forward(self, input, hidden, encoder_outputs):
         # print ('in dec ip', input.size())
-        # input = self.embedding(input).view(1, self.batch_size, -1)
+        # input = self.embedding(input)
         embedded = self.dropout(input.view(1, self.batch_size, -1))
         # print ('dec emb size', embedded.size())
-        attn_weights = F.softmax(self.attn(torch.cat((embedded.squeeze(0), hidden.squeeze(0)), 1)), dim=1)
-        # print ('attn_weights size', attn_weights.size())
-        attn_applied = torch.bmm(attn_weights.unsqueeze(0).transpose(0, 1),
-            encoder_outputs.transpose(0, 1))
-        # print ('attn_applied size', attn_applied.size())
-        combined = torch.cat((embedded.squeeze(0), attn_applied.transpose(0, 1).squeeze(0)), 1)
-        output = F.relu(self.attn_combine(combined).unsqueeze(0))
-        output, hidden = self.gru(output, hidden)
+        # attn_weights = F.softmax(self.attn(torch.cat((embedded.squeeze(0), hidden.squeeze(0)), 1)), dim=1)
+        # # print ('attn_weights size', attn_weights.size())
+        # attn_applied = torch.bmm(attn_weights.unsqueeze(0).transpose(0, 1),
+        #     encoder_outputs.transpose(0, 1))
+        # # print ('attn_applied size', attn_applied.size())
+        # combined = torch.cat((embedded.squeeze(0), attn_applied.transpose(0, 1).squeeze(0)), 1)
+        # output = F.relu(self.attn_combine(combined).unsqueeze(0))
+        output, hidden = self.gru(embedded, hidden)
+        # print ('out', output.size())
         output = self.out(output.squeeze(0))
-        return output, hidden, attn_weights
+        return output, hidden
 
     # def init_hidden(self):
     #     return Variable(torch.zeros(1, self.batch_size, self.hidden_size)).cuda()

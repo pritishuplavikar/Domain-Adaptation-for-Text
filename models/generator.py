@@ -35,10 +35,10 @@ class Generator(nn.Module):
 
 		decoded_embeddings = []
 
-		for di in range(self.max_len):
+		for di in range(input.size(0)):
 
 			decoder_input = self.embedding_layer(decoder_input).view(1, self.train_config['batch_size'], -1)
-			decoder_output, decoder_hidden, decoder_attention = self.decoder(
+			decoder_output, decoder_hidden = self.decoder(
 				decoder_input, decoder_hidden, encoder_outputs)
 
 			decoded_embeddings.append(decoder_output)
