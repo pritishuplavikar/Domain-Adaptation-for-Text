@@ -2,78 +2,77 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from torch.autograd import Variable
-from models.encoder import Encoder
-from models.decoder import Decoder
+from models.seq2seq_cycle_gan import Seq2SeqCycleGAN
 from data.constants import PAD_token, SOS_token, EOS_token, DEVICE
 from data.shakespeare_modern import ShakespeareModern
-from data.utils import idx_to_sent
+from data.utils import idx_to_sent, get_addn_feats
 from tqdm import tqdm
-import numpy as np
 
 train_shakespeare_path = './dataset/train.original.nltktok'
 test_shakespeare_path = './dataset/test.original.nltktok'
 train_modern_path = './dataset/train.modern.nltktok'
 test_modern_path = './dataset/test.modern.nltktok'
 
-
 def train(model_config, train_config):
 	mode = 'train'
+
 	dataset = ShakespeareModern(train_shakespeare_path, test_shakespeare_path, train_modern_path, test_modern_path, mode=mode)
 	dataloader = DataLoader(dataset, batch_size=train_config['batch_size'], shuffle=False)
-	vocab = dataset.vocab
-	max_length = dataset.domain_A_max_len
-	encoder = Encoder(model_config['embedding_size'], model_config['hidden_dim'], dataset.vocab.num_words, batch_size=train_config['batch_size']).cuda()
-	# print(dataset.domain_A_max_len)
-	decoder = Decoder(model_config['embedding_size'], model_config['hidden_dim'], dataset.vocab.num_words, max_length, batch_size=train_config['batch_size']).cuda()
 
-	criterion = nn.NLLLoss().cuda()
-	encoder_optimizer = torch.optim.SGD(encoder.parameters(), lr=train_config['base_lr'])
-	decoder_optimizer = torch.optim.SGD(decoder.parameters(), lr=train_config['base_lr'])
+	model = Seq2SeqCycleGAN(model_config, train_config, dataset.vocab, dataset.max_len, mode=mode)
 
-	for epoch in range(train_config['num_epochs']):
-		for idx, (s, s_addn_feats, m, m_addn_feats) in tqdm(enumerate(dataloader)):
-			input_tensor = s.transpose(0, 1).cuda()
-			target_tensor = m.transpose(0, 1).cuda()
+	for epoch in range(int(train_config['num_epochs'])):
+		for idx, (real_A, A_addn_feats, real_B, B_addn_feats) in tqdm(enumerate(dataloader)):
 
-			encoder_optimizer.zero_grad()
-			decoder_optimizer.zero_grad()
+			real_A_one_hot = model.indices_to_one_hot(real_A.squeeze(0))
+			real_A = Variable(real_A_one_hot).cuda()
 
-			input_length = input_tensor.size(0)
-			target_length = target_tensor.size(0)
+			real_B_one_hot = model.indices_to_one_hot(real_B.squeeze(0))
+			real_B = Variable(real_B_one_hot).cuda()
 
-			encoder_outputs = torch.zeros(max_length, encoder.hidden_size)
+			A_addn_feats = A_addn_feats.cuda()
+			B_addn_feats = B_addn_feats.cuda()
 
-			loss = 0
-			print ('ip', input_tensor.size())
-			encoder_output, encoder_hidden = encoder(input_tensor)
-			# encoder_outputs = encoder_output[0, 0]
+			model.forward(real_A, A_addn_feats, real_B, B_addn_feats)
+			model.optimize_parameters()
 
-			decoder_input = torch.empty((train_config['batch_size'], 1)).fill_(SOS_token).type(torch.LongTensor).cuda()
-			print (decoder_input.size())
+			if idx % 1000 == 0:
+				print('\tepoch [{}/{}], iter: {}, Losses: G_AtoB: {}, G_BtoA: {}, D_A: {}, D_B: {}, cycle_A: {}, cycle_B: {}, idt_A: {}, idt_B: {}'
+					.format(epoch+1, train_config['num_epochs'], idx, model.loss_G_AtoB, model.loss_G_BtoA, 
+						model.loss_D_A, model.loss_D_B, model.loss_cycle_A, model.loss_cycle_B, 
+						model.loss_idt_A, model.loss_idt_B))
 
-			decoder_hidden = encoder_output[-1]
-			print ('dec hid', decoder_hidden.size(), type(decoder_hidden))
+		torch.save(model.embedding_layer.state_dict(), str(epoch+1)+'_embedding_layer.pth')
+		torch.save(model.G_AtoB.state_dict(), str(epoch+1)+'_G_AtoB.pth')
+		torch.save(model.G_BtoA.state_dict(), str(epoch+1)+'_G_BtoA.pth')
+		torch.save(model.D_A.state_dict(), str(epoch+1)+'_D_A.pth')
+		torch.save(model.D_B.state_dict(), str(epoch+1)+'_D_B.pth')
 
-			while decoder_input:
-				decoder.hidden = decoder_hidden
-				decoder_input, decoder_hidden = decoder(
-					decoder_input, encoder_output)
+		print('\tepoch [{}/{}] complete. Models saved.'.format(epoch+1, train_config['num_epochs']))
 
-			loss += criterion(decoder_output, target_tensor[di])
-			loss.backward()
+def test(model_config, train_config):
+	mode = 'test'
 
-			encoder_optimizer.step()
-			decoder_optimizer.step()
-			
-			if idx % 100 == 0:
-				print('\tepoch [{}/{}], iter: {}, s_loss: {:.4f}, m_loss: {:.4f}, preds: s: {}, {}, m: {}, {}'
-					.format(epoch+1, train_config['num_epochs'], idx, s_loss.item(), m_loss.item(), s_output.item(), round(s_output.item()), m_output.item(), round(m_output.item())))
+	dataset = ShakespeareModern(train_shakespeare_path, test_shakespeare_path, train_modern_path, test_modern_path, mode=mode)
+	dataloader = DataLoader(dataset, batch_size=train_config['batch_size'], shuffle=False)
 
-		print('\tepoch [{}/{}]'.format(epoch+1, train_config['num_epochs']))
+	model = Seq2SeqCycleGAN(model_config, train_config, dataset.vocab, dataset.max_len, mode=mode)
 
+	# for epoch in range(train_config['num_epochs']):
+	for idx, (real_A, A_addn_feats, real_B, B_addn_feats) in tqdm(enumerate(dataloader)):
+		if idx == 5:
+			break
 
-		return loss.item() / target_length		
+		real_A_one_hot = model.indices_to_one_hot(real_A.squeeze(0))
+		real_A = Variable(real_A_one_hot).cuda()
 
+		real_B_one_hot = model.indices_to_one_hot(real_B.squeeze(0))
+		real_B = Variable(real_B_one_hot).cuda()
+
+		A_addn_feats = A_addn_feats.cuda()
+		B_addn_feats = B_addn_feats.cuda()
+
+		model.forward(real_A, A_addn_feats, real_B, B_addn_feats)
 
 model_config = {
 	'embedding_size': 300,
@@ -83,9 +82,12 @@ model_config = {
 train_config = {
 	'batch_size': 1,
 	'continue_train': False,
-	'model_path': './shakespeare_disc.pth',
-	'base_lr': 0.001,
-	'num_epochs': 10
+	'which_epoch': '0',
+	'base_lr': 0.0001,
+	'num_epochs': '10'
 }
-train_config['num_epochs'] = 3
-print(train(model_config, train_config))
+
+train(model_config, train_config)
+
+train_config['which_epoch'] = train_config['num_epochs']
+test(model_config, train_config)
