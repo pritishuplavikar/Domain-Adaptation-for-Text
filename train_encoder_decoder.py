@@ -21,7 +21,7 @@ def train(model_config, train_config):
 
 	model = Seq2SeqCycleGAN(model_config, train_config, dataset.vocab, dataset.max_len, mode=mode)
 
-	for epoch in range(train_config['num_epochs']):
+	for epoch in range(int(train_config['num_epochs'])):
 		for idx, (real_A, A_addn_feats, real_B, B_addn_feats) in tqdm(enumerate(dataloader)):
 
 			real_A_one_hot = model.indices_to_one_hot(real_A.squeeze(0))
@@ -34,8 +34,9 @@ def train(model_config, train_config):
 			B_addn_feats = B_addn_feats.cuda()
 
 			model.forward(real_A, A_addn_feats, real_B, B_addn_feats)
+			model.optimize_parameters()
 
-			if idx % 100 == 0:
+			if idx % 1000 == 0:
 				print('\tepoch [{}/{}], iter: {}, Losses: G_AtoB: {}, G_BtoA: {}, D_A: {}, D_B: {}, cycle_A: {}, cycle_B: {}, idt_A: {}, idt_B: {}'
 					.format(epoch+1, train_config['num_epochs'], idx, model.loss_G_AtoB, model.loss_G_BtoA, 
 						model.loss_D_A, model.loss_D_B, model.loss_cycle_A, model.loss_cycle_B, 
@@ -57,19 +58,21 @@ def test(model_config, train_config):
 
 	model = Seq2SeqCycleGAN(model_config, train_config, dataset.vocab, dataset.max_len, mode=mode)
 
-	for epoch in range(train_config['num_epochs']):
-		for idx, (real_A, A_addn_feats, real_B, B_addn_feats) in tqdm(enumerate(dataloader)):
+	# for epoch in range(train_config['num_epochs']):
+	for idx, (real_A, A_addn_feats, real_B, B_addn_feats) in tqdm(enumerate(dataloader)):
+		if idx == 5:
+			break
 
-			real_A_one_hot = model.indices_to_one_hot(real_A.squeeze(0))
-			real_A = Variable(real_A_one_hot).cuda()
+		real_A_one_hot = model.indices_to_one_hot(real_A.squeeze(0))
+		real_A = Variable(real_A_one_hot).cuda()
 
-			real_B_one_hot = model.indices_to_one_hot(real_B.squeeze(0))
-			real_B = Variable(real_B_one_hot).cuda()
+		real_B_one_hot = model.indices_to_one_hot(real_B.squeeze(0))
+		real_B = Variable(real_B_one_hot).cuda()
 
-			A_addn_feats = A_addn_feats.cuda()
-			B_addn_feats = B_addn_feats.cuda()
+		A_addn_feats = A_addn_feats.cuda()
+		B_addn_feats = B_addn_feats.cuda()
 
-			model.forward(real_A, A_addn_feats, real_B, B_addn_feats)
+		model.forward(real_A, A_addn_feats, real_B, B_addn_feats)
 
 model_config = {
 	'embedding_size': 300,
@@ -79,10 +82,12 @@ model_config = {
 train_config = {
 	'batch_size': 1,
 	'continue_train': False,
-	'model_path': './shakespeare_disc.pth',
+	'which_epoch': '0',
 	'base_lr': 0.0001,
-	'num_epochs': 10
+	'num_epochs': '10'
 }
 
 train(model_config, train_config)
+
+train_config['which_epoch'] = train_config['num_epochs']
 test(model_config, train_config)

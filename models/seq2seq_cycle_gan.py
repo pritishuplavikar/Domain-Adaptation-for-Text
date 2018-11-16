@@ -33,14 +33,20 @@ class Seq2SeqCycleGAN:
 		self.G_BtoA = Generator(self.embedding_layer, self.model_config, self.train_config, self.vocab_size, self.max_len, mode=self.mode).cuda()
 
 		if self.mode == 'train':
+			self.D_B = Discriminator(self.embedding_layer, self.model_config, self.train_config).cuda()
+			self.D_A = Discriminator(self.embedding_layer, self.model_config, self.train_config).cuda()
+
+			if self.train_config['continue_train']:
+				self.embedding_layer.load_state_dict(torch.load(self.train_config['which_epoch'] + '_embedding_layer.pth'))
+				self.G_AtoB.load_state_dict(torch.load(self.train_config['which_epoch'] + '_G_AtoB.pth'))
+				self.G_BtoA.load_state_dict(torch.load(self.train_config['which_epoch'] + '_G_BtoA.pth'))
+				self.D_B.load_state_dict(torch.load(self.train_config['which_epoch'] + '_D_B.pth'))
+				self.D_A.load_state_dict(torch.load(self.train_config['which_epoch'] + '_D_A.pth'))
+
 			self.embedding_layer.train()
 			self.G_AtoB.train()
 			self.G_BtoA.train()
-
-			self.D_B = Discriminator(self.embedding_layer, self.model_config, self.train_config).cuda()
 			self.D_B.train()
-
-			self.D_A = Discriminator(self.embedding_layer, self.model_config, self.train_config).cuda()
 			self.D_A.train()
 
 			self.criterionBCE = nn.BCELoss().cuda()
@@ -54,10 +60,9 @@ class Seq2SeqCycleGAN:
 			self.real_label = torch.ones((train_config['batch_size'], 1)).cuda()
 			self.fake_label = torch.zeros((train_config['batch_size'], 1)).cuda()
 		else:
-			self.embedding_layer.load_state_dict(torch.load('embedding_layer.pth'))
-
-			self.G_AtoB.load_state_dict(torch.load('G_AtoB.pth'))
-			self.G_BtoA.load_state_dict(torch.load('G_BtoA.pth'))
+			self.embedding_layer.load_state_dict(torch.load(self.train_config['which_epoch'] + '_embedding_layer.pth'))
+			self.G_AtoB.load_state_dict(torch.load(self.train_config['which_epoch'] + '_G_AtoB.pth'))
+			self.G_BtoA.load_state_dict(torch.load(self.train_config['which_epoch'] + '_G_BtoA.pth'))
 
 			self.embedding_layer.eval()
 			self.G_AtoB.eval()
@@ -130,34 +135,37 @@ class Seq2SeqCycleGAN:
 		self.real_B_label = self.real_B.max(dim=1)[1]
 
 		self.fake_B = F.softmax(self.G_AtoB.forward(self.real_A), dim=1)
-
-		# print (self.real_A.max(dim=1)[1].tolist(), self.rec_A.max(dim=1)[1].tolist())
-
 		self.fake_A = F.softmax(self.G_BtoA.forward(self.real_B), dim=1)
 		
-		# print (self.real_B.max(dim=1)[1].tolist(), self.rec_B.max(dim=1)[1].tolist())
-
 		if self.mode == 'train':
 			self.rec_A = self.G_BtoA.forward(self.fake_B)
 			self.rec_B = self.G_AtoB.forward(self.fake_A)
 
-			self.set_requires_grad([self.D_A, self.D_B], False)
-
-			self.optimizer_G.zero_grad()
-			self.backward_G()
-			self.optimizer_G.step()
-
-			self.set_requires_grad([self.D_A, self.D_B], True)
-			self.optimizer_D.zero_grad()
-			self.backward_D_B()
-			self.backward_D_A()
-			self.optimizer_D.step()
 		else:
+			real_A_list = self.real_A.max(dim=1)[1].tolist()
+			real_B_list = self.real_B.max(dim=1)[1].tolist()
+
 			fake_B_list = self.fake_B.max(dim=1)[1].tolist()
 			fake_A_list = self.fake_A.max(dim=1)[1].tolist()
 
-			print ('Shakespeare to Modern: ', idx_to_sent(fake_B_list, self.vocab))
-			print ('Modern to Shakespeare: ', idx_to_sent(fake_A_list, self.vocab))
+			print ('Input (Shakespeare):', idx_to_sent(real_A_list, self.vocab))
+			print ('Output (Modern):', idx_to_sent(fake_B_list, self.vocab))
+			print ('\n')
+			print ('Input (Modern):', idx_to_sent(real_B_list, self.vocab))
+			print ('Output (Shakespeare):', idx_to_sent(fake_A_list, self.vocab))
+			print ('\n')
+
+	def optimize_parameters(self):
+		self.set_requires_grad([self.D_A, self.D_B], False)
+		self.optimizer_G.zero_grad()
+		self.backward_G()
+		self.optimizer_G.step()
+
+		self.set_requires_grad([self.D_A, self.D_B], True)
+		self.optimizer_D.zero_grad()
+		self.backward_D_B()
+		self.backward_D_A()
+		self.optimizer_D.step()
 
 	def update_label_sizes(self, real, rec, real_label):
 		
